@@ -3,6 +3,8 @@ title: "Rain Movies"
 author: "Matthew Ross"
 date: "11/7/2019"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Using R to make movies
@@ -24,6 +26,7 @@ library(tmap)
 library(sf)
 theme_set(theme_few()) # Set ggplot theme
 
+devtools::install_github('thomasp85/gganimate')
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -93,10 +96,18 @@ p1 <- ggplot(slice_p,aes(x=date,y=mean_temp,color=station,group=station)) +
   labs(title = 'Date: {frame_time}', x='Date',y= 'Mean Temp (f)') + 
   transition_time(date) 
 
-
 animate(p1, nframes=nrow(slice_p))
+#animate(p1, nframes=nrow(slice_p), renderer = ffmpeg_renderer())
+#animate(p1, nframes=nrow(slice_p), renderer = file_renderer('/Users/kkamundson/Desktop/wr674/class/fancy_vis/animation/'))[1:6]
 
 
+#library(gifski_renderer)
+#animate(anim, renderer = file_renderer('~/animation/'))[1:6]
+
+#animate(nations_plot, renderer = ffmpeg_renderer(), width = 800, height = 450)
+#anim_save("nations.mp4")
+
+#?animate
 ```
 
 
@@ -112,8 +123,6 @@ p2 <- ggplot(daily_p,aes(x=date,y=mean_temp,color=station,group=station)) +
 
 
 animate(p2, nframes=nrow(daily_p))
-
-
 
 ```
 
@@ -148,8 +157,6 @@ tm_shape(co) +
 
 ```{r}
 
-
-  
 basemap <- tm_shape(co) + 
     tm_polygons() + 
   tm_shape(co_elev) +
@@ -192,13 +199,11 @@ saveVideo({
   ani.width=1000,
   ani.height=800)
 
-
 ```
 
 # A cooler video
 
-## Let's see if we can see weather fronts by downloading all Colorado data and
-trying to get those to flash
+## Let's see if we can see weather fronts by downloading all Colorado data and trying to get those to flash
 
 
 ```{r,eval=F}
@@ -281,6 +286,29 @@ between the min, mean, and max temps. The movie should cover the full year.
 
 ```{r}
 
+#NOTE TO MATT: I could not get any of the animation tools to work on my computer with the R version I have. I tried several different things - many of which we discussed in class. Therefore I am writing the code as best I can - but can not actually run it. 
+
+#Correlation, so going to have air force academy on one axis and fort collins on the other.
+#There will be three lines - each colored by min, max, and mean.
+
+#?spread
+#?gather
+#?mutate
+#?filter
+#?animate
+
+p <- daily_p %>%
+  group_by(station) %>%
+  mutate()
+  gather(key='station',value='mean_temp') %>%
+  filter(!is.na(value))
+
+ggplot(daily_p,aes(x=station,y=af,color=type)) + 
+  geom_point() +
+  theme_few()
+
+animate(p, nframes(nrows(daily_p)))
+
 ```
 
 
@@ -295,5 +323,33 @@ style (change the background, add other layers (like counties or cities)), etc..
 
 ```{r}
 load('DailyP.RData')
+
+co_stations <- riem_stations(network = 'CO_ASOS')
+
+usa <- us_states()
+
+co <- usa %>%
+  filter(name == 'Colorado')
+
+sf_p <- daily_p %>%
+  st_as_sf(coords=c('lon','lat'),crs=4326)
+
+
+co_elev <- elevatr::get_elev_raster(co,z=6)
+
+tm_shape(co) + 
+  tm_polygons() + 
+  tm_shape(co_elev) +
+  tm_raster(style='cont',palette = 'Browns') + 
+  tm_shape(sf_p) + 
+  tm_dots(col='station',size=3,palette=c('red','white'))
+
+basemap <- tm_shape(co) + 
+    tm_polygons() + 
+  tm_shape(co_elev) +
+    tm_raster(style='cont',
+              palette = 'Browns',
+              title='Elevation (m)') 
+
 ```
 
